@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { loadAppPort } from "../src/appport.ts";
-import { validateCredentials, validateIdentity } from "../src/contracts/schemas.ts";
+import { builtInCapabilities, loadAppPort } from "../src/appport.ts";
+import { getTimestamp } from "../src/capabilities/time.ts";
+import { validateCredentials, validateIdentity, validateTimestamp } from "../src/contracts/schemas.ts";
 import * as appportSdk from "../src/index.ts";
+import { isTimeNonDeterministic, usesTimeCapability } from "../src/time/index.ts";
 
 const validManifest = {
   id: "app://auth-basic",
@@ -74,6 +76,106 @@ test("credentials and identity schema helpers validate objects", () => {
 
   assert.equal(validateIdentity({ user_id: "u-1", claims: { role: "admin" } }), true);
   assert.equal(validateIdentity({ claims: {} }), false);
+});
+
+test("loads time module as non-deterministic", () => {
+  const appport = loadAppPort({
+    id: "app://time-basic",
+    version: "0.1.0",
+    modules: [
+      {
+        name: "module.now",
+        version: "1.0.0",
+        language: "rust",
+        artifact: "wasm://module.now@1.0.0",
+        determinism: "pure",
+        io: {
+          input: "schema://unit",
+          output: "schema://timestamp"
+        },
+        capabilities: ["time"]
+      }
+    ],
+    capabilities: [
+      {
+        name: "time",
+        version: "1.0.0",
+        kind: "primitive",
+        interface: "cap://time.now"
+      }
+    ]
+  });
+
+  const timeModule = appport.modules[0];
+  assert.equal(usesTimeCapability(timeModule), true);
+  assert.equal(isTimeNonDeterministic(timeModule), true);
+  assert.equal(timeModule.determinism, "non_deterministic");
+  assert.equal(timeModule.io.output, "schema://timestamp");
+  assert.equal(appport.schemas.get("schema://timestamp")?.format, "date-time");
+});
+
+test("rejects invalid time capability declaration", () => {
+  assert.throws(
+    () =>
+      loadAppPort({
+        id: "app://time-invalid",
+        version: "0.1.0",
+        modules: [],
+        capabilities: [
+          {
+            name: "time",
+            version: "1.0.0",
+            kind: "primitive",
+            interface: "cap://time.clock"
+          }
+        ]
+      }),
+    /time primitive capability/
+  );
+});
+
+test("rejects time module without manifest time capability", () => {
+  assert.throws(
+    () =>
+      loadAppPort({
+        id: "app://time-missing",
+        version: "0.1.0",
+        modules: [
+          {
+            name: "module.now",
+            version: "1.0.0",
+            language: "rust",
+            artifact: "wasm://module.now@1.0.0",
+            determinism: "pure",
+            io: {
+              input: "schema://unit",
+              output: "schema://timestamp"
+            },
+            capabilities: ["time"]
+          }
+        ],
+        capabilities: []
+      }),
+    /manifest\.capabilities does not define it/
+  );
+});
+
+test("timestamp schema helper validates date-time strings", () => {
+  assert.equal(validateTimestamp("2026-09-09T21:51:38.100Z"), true);
+  assert.equal(validateTimestamp("2026-09-09T21:51:38+00:00"), true);
+  assert.equal(validateTimestamp("2026-09-09"), false);
+});
+
+test("time host helper returns timestamps", async () => {
+  await assert.rejects(() => getTimestamp({}), /time\.now/);
+  assert.equal(await getTimestamp({ "time.now": () => "2026-09-09T21:51:38.100Z" }), "2026-09-09T21:51:38.100Z");
+});
+
+test("built-in capabilities include time primitive", () => {
+  assert.deepEqual(
+    builtInCapabilities().map((capability) => capability.name),
+    ["identity", "time"]
+  );
 });
 
 test("extension entrypoint re-exports upstream @appport/sdk surface", () => {

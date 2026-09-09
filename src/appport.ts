@@ -5,8 +5,10 @@ import {
   type CapabilitySpec,
   validateIdentityCapability
 } from "./capabilities/identity.ts";
+import { TIME_CAPABILITY, validateTimeCapability } from "./capabilities/time.ts";
 import { type AuthSpec, validateAuthSpec } from "./contracts/auth.ts";
 import { type JsonSchema, registerBuiltInSchemas } from "./contracts/schemas.ts";
+import { usesTimeCapability } from "./time/index.ts";
 
 export interface AppPortManifest {
   id: string;
@@ -96,6 +98,10 @@ function validateCapabilitySpecs(capabilities: CapabilitySpec[]): void {
     if (isPrimitiveCapability(capability) && capability.name === "identity" && !validateIdentityCapability(capability)) {
       throw new Error("identity primitive capability must match cap://identity.verify v1.0.0 contract");
     }
+
+    if (capability.name === "time" && !validateTimeCapability(capability)) {
+      throw new Error("time primitive capability must match cap://time.now v1.0.0 contract");
+    }
   }
 }
 
@@ -108,12 +114,27 @@ export function loadAppPort(manifestInput: unknown): AuthenticatedAppPort {
 
   const moduleNames = new Set(manifest.modules.map((moduleSpec) => moduleSpec.name));
   const hasIdentityCapability = manifest.capabilities.some((capability) => validateIdentityCapability(capability));
+  const hasTimeCapability = manifest.capabilities.some((capability) => validateTimeCapability(capability));
+  const modules = manifest.modules.map((moduleSpec) => {
+    if (!usesTimeCapability(moduleSpec)) {
+      return moduleSpec;
+    }
+
+    if (!hasTimeCapability) {
+      throw new Error(`module '${moduleSpec.name}' declares time capability but manifest.capabilities does not define it`);
+    }
+
+    return {
+      ...moduleSpec,
+      determinism: "non_deterministic" as const
+    };
+  });
 
   let authSpec: AuthSpec | undefined;
   if (manifest.auth) {
     authSpec = validateAuthSpec(manifest.auth, moduleNames);
 
-    const authModule = manifest.modules.find((moduleSpec) => moduleSpec.name === authSpec.entry);
+    const authModule = modules.find((moduleSpec) => moduleSpec.name === authSpec.entry);
     if (!authModule) {
       throw new Error(`auth.entry '${authSpec.entry}' must reference a valid module`);
     }
@@ -132,7 +153,7 @@ export function loadAppPort(manifestInput: unknown): AuthenticatedAppPort {
   const appport = new AuthenticatedAppPort({
     id: manifest.id,
     version: manifest.version,
-    modules: manifest.modules,
+    modules,
     capabilities: manifest.capabilities,
     auth: authSpec
   });
@@ -148,5 +169,5 @@ export function loadAppPort(manifestInput: unknown): AuthenticatedAppPort {
 }
 
 export function builtInCapabilities(): CapabilitySpec[] {
-  return [IDENTITY_CAPABILITY];
+  return [IDENTITY_CAPABILITY, TIME_CAPABILITY];
 }

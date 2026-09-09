@@ -1,0 +1,26 @@
+{
+  "id": "app://time-basic",
+  "version": "0.1.0",
+  "modules": [
+    {
+      "name": "module.now",
+      "version": "1.0.0",
+      "language": "rust",
+      "artifact": "wasm://module.now@1.0.0",
+      "determinism": "pure",
+      "io": {
+        "input": "schema://unit",
+        "output": "schema://timestamp"
+      },
+      "capabilities": ["time"]
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "time",
+      "version": "1.0.0",
+      "kind": "primitive",
+      "interface": "cap://time.now"
+    }
+  ]
+}
