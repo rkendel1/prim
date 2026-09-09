@@ -1,6 +1,7 @@
 export interface JsonSchema {
   $id: string;
   type: string;
+  format?: string;
   properties?: Record<string, unknown>;
   required?: string[];
 }
@@ -14,6 +15,8 @@ export interface Identity {
   user_id: string;
   claims?: Record<string, unknown>;
 }
+
+export type Timestamp = string;
 
 export const CREDENTIALS_SCHEMA: JsonSchema = {
   $id: "schema://credentials",
@@ -35,9 +38,16 @@ export const IDENTITY_SCHEMA: JsonSchema = {
   required: ["user_id"]
 };
 
+export const TIMESTAMP_SCHEMA: JsonSchema = {
+  $id: "schema://timestamp",
+  type: "string",
+  format: "date-time"
+};
+
 export function registerBuiltInSchemas(registry: Map<string, JsonSchema>): void {
   registry.set(CREDENTIALS_SCHEMA.$id, CREDENTIALS_SCHEMA);
   registry.set(IDENTITY_SCHEMA.$id, IDENTITY_SCHEMA);
+  registry.set(TIMESTAMP_SCHEMA.$id, TIMESTAMP_SCHEMA);
 }
 
 export function validateCredentials(value: unknown): value is Credentials {
@@ -64,4 +74,12 @@ export function validateIdentity(value: unknown): value is Identity {
   }
 
   return !!candidate.claims && typeof candidate.claims === "object";
+}
+
+export function validateTimestamp(value: unknown): value is Timestamp {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(Date.parse(value));
 }
