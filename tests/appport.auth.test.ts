@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { loadAppPort } from "../src/appport.ts";
 import { validateCredentials, validateIdentity } from "../src/contracts/schemas.ts";
+import * as appportSdk from "../src/index.ts";
 
 const validManifest = {
   id: "app://auth-basic",
@@ -73,4 +74,8 @@ test("credentials and identity schema helpers validate objects", () => {
 
   assert.equal(validateIdentity({ user_id: "u-1", claims: { role: "admin" } }), true);
   assert.equal(validateIdentity({ claims: {} }), false);
+});
+
+test("extension entrypoint re-exports upstream @appport/sdk surface", () => {
+  assert.ok("s" in appportSdk);
 });

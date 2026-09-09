@@ -16,7 +16,7 @@ export interface AppPortManifest {
   auth?: AuthSpec;
 }
 
-export class AppPort {
+export class AuthenticatedAppPort {
   public readonly id: string;
   public readonly version: string;
   public readonly modules: ModuleSpec[];
@@ -99,7 +99,7 @@ function validateCapabilitySpecs(capabilities: CapabilitySpec[]): void {
   }
 }
 
-export function loadAppPort(manifestInput: unknown): AppPort {
+export function loadAppPort(manifestInput: unknown): AuthenticatedAppPort {
   validateManifestShape(manifestInput);
 
   const manifest = manifestInput;
@@ -129,7 +129,7 @@ export function loadAppPort(manifestInput: unknown): AppPort {
     }
   }
 
-  const appport = new AppPort({
+  const appport = new AuthenticatedAppPort({
     id: manifest.id,
     version: manifest.version,
     modules: manifest.modules,
