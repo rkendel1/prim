@@ -1,0 +1,29 @@
+{
+  "id": "app://auth-basic",
+  "version": "0.1.0",
+  "modules": [
+    {
+      "name": "module.authenticate",
+      "version": "1.0.0",
+      "language": "rust",
+      "artifact": "wasm://module.authenticate@1.0.0",
+      "determinism": "non_deterministic",
+      "io": {
+        "input": "schema://credentials",
+        "output": "schema://identity"
+      },
+      "capabilities": ["identity"]
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "identity",
+      "version": "1.0.0",
+      "kind": "primitive",
+      "interface": "cap://identity.verify"
+    }
+  ],
+  "auth": {
+    "entry": "module.authenticate"
+  }
+}
