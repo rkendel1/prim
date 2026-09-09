@@ -1,0 +1,25 @@
+{
+  "name": "prim",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "node --test tests/appport.auth.test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://localhost:26831/rkendel1/prim"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@appport/sdk": "^1.1.18"
+  }
+}
